@@ -1,0 +1,85 @@
+version: "3.7"
+services:
+    app:
+        build:
+            args:
+                user: usuario
+                uid: 1000
+            context: ./
+            dockerfile: Dockerfile
+        image: eloquent
+        container_name: eloquent-app
+        environment:
+            PHP_POST_MAX_SIZE: 256M
+        restart: unless-stopped
+        working_dir: /var/www/
+        volumes:
+            - ./:/var/www
+        networks:
+            - neteloquent
+
+    db:
+        image: mysql:8.0
+        container_name: eloquent-db
+        restart: unless-stopped
+        ports:
+            - 3356:3306
+        environment:
+            MYSQL_DATABASE: eloquent
+            MYSQL_ROOT_PASSWORD: root
+            MYSQL_PASSWORD: root
+            MYSQL_USER: user
+            SERVICE_TAGS: dev
+            SERVICE_NAME: mysql
+        networks:
+            - neteloquent
+
+    nginx:
+        image: nginx:alpine
+        container_name: eloquent-nginx
+        restart: unless-stopped
+        ports:
+            - 80:80
+        volumes:
+            - ./:/var/www
+            - ./docker-compose/nginx:/etc/nginx/conf.d/
+        networks:
+            - neteloquent
+
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin:latest
+        restart: unless-stopped
+        container_name: eloquent-phpmyadmin
+        links:
+            - db
+        ports:
+            - 81:80
+        environment:
+            - PMA_ARBITRARY=1
+        networks:
+            - neteloquent
+
+    node:
+        image: node:20.2
+        container_name: eloquent-node
+        entrypoint: /bin/sh
+        ports:
+            - 8000:8000
+        working_dir: /var/www/
+        volumes:
+            - ./:/var/www
+        tty: true
+        networks:
+            - neteloquent
+
+    redis:
+        image: redis:latest
+        container_name: eloquent-redis
+        ports:
+            - 6379:6379
+        networks:
+            - neteloquent
+
+networks:
+    neteloquent:
+        driver: bridge
